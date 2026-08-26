@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore Vexel.sln
+      - run: dotnet build Vexel.sln --configuration Release --no-restore
+      - run: dotnet test Vexel.sln --configuration Release --no-build
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet publish src/Vexel.App/Vexel.App.csproj --configuration Release --runtime win-x64 --self-contained true --output publish
+      - shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Compress-Archive -Path publish\* -DestinationPath artifacts\Vexel-${{ github.ref_name }}-win-x64.zip
+          (Get-FileHash artifacts\Vexel-${{ github.ref_name }}-win-x64.zip -Algorithm SHA256).Hash | Set-Content artifacts\Vexel-${{ github.ref_name }}-win-x64.zip.sha256
+      - shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ github.ref_name }} artifacts\* --generate-notes

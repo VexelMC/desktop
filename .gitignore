@@ -4,4 +4,4 @@
 **/obj/
 TestResults/
 VexelData/
-
+.verify-publish/
