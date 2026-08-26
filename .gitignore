@@ -5,3 +5,4 @@
 TestResults/
 VexelData/
 .verify-publish/
+.local-artifacts/
