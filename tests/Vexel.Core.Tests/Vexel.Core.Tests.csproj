@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Vexel.Core\Vexel.Core.csproj" />
     <ProjectReference Include="..\..\src\Vexel.Platform.Windows\Vexel.Platform.Windows.csproj" />
+    <ProjectReference Include="..\..\src\Vexel.Patching\Vexel.Patching.csproj" />
   </ItemGroup>
 
 </Project>
