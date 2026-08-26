@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Vexel.App.Infrastructure;
 using Vexel.App.ViewModels;
 using Vexel.Core.Logging;
+using Vexel.Core.Minecraft;
 using Vexel.Core.Settings;
+using Vexel.Platform.Windows.Detection;
 
 namespace Vexel.App;
 
@@ -19,6 +21,7 @@ public partial class App : Application
             new JsonSettingsStore(provider.GetRequiredService<VexelPaths>().Settings));
         services.AddSingleton<IAppLogger>(provider =>
             new JsonFileLogger(provider.GetRequiredService<VexelPaths>().Logs));
+        services.AddSingleton<IMinecraftDetector, MinecraftDetector>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
         _services = services.BuildServiceProvider();

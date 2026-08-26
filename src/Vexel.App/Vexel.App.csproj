@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vexel.Core\Vexel.Core.csproj" />
+    <ProjectReference Include="..\Vexel.Platform.Windows\Vexel.Platform.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -10,7 +11,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

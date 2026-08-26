@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Vexel.App.Models;
 using Vexel.Core.Logging;
+using Vexel.Core.Minecraft;
 using Vexel.Core.Settings;
 
 namespace Vexel.App.ViewModels;
@@ -9,15 +10,20 @@ namespace Vexel.App.ViewModels;
 public sealed class MainViewModel : ViewModelBase
 {
     private readonly IAppLogger _logger;
+    private readonly IMinecraftDetector _minecraftDetector;
     private readonly ISettingsStore _settingsStore;
     private string _gameStatus = "Checking installation…";
     private string _statusDetail = "Vexel has not modified Minecraft.";
     private bool _isRefreshing;
 
-    public MainViewModel(IAppLogger logger, ISettingsStore settingsStore)
+    public MainViewModel(
+        IAppLogger logger,
+        ISettingsStore settingsStore,
+        IMinecraftDetector minecraftDetector)
     {
         _logger = logger;
         _settingsStore = settingsStore;
+        _minecraftDetector = minecraftDetector;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsRefreshing);
         Features = new ObservableCollection<FeatureCard>
         {
@@ -75,17 +81,44 @@ public sealed class MainViewModel : ViewModelBase
         IsRefreshing = true;
         try
         {
-            GameStatus = "Minecraft detection is not implemented yet";
-            StatusDetail = "Phase 3 will identify the package, process, and executable fingerprint. No patches can be applied.";
+            var detection = await _minecraftDetector.DetectAsync();
+            UpdateGameStatus(detection);
             await _logger.WriteAsync(new LogEntry(
                 DateTimeOffset.UtcNow,
                 LogLevel.Information,
                 "app.refresh",
-                "The initial application shell requested a Minecraft status refresh."));
+                "Minecraft status refresh completed.",
+                new Dictionary<string, string>
+                {
+                    ["installed"] = detection.IsInstalled.ToString(),
+                    ["running"] = detection.IsRunning.ToString(),
+                    ["fingerprinted"] = (detection.Fingerprint is not null).ToString(),
+                }));
         }
         finally
         {
             IsRefreshing = false;
         }
+    }
+
+    private void UpdateGameStatus(MinecraftDetectionResult detection)
+    {
+        if (!detection.IsInstalled)
+        {
+            GameStatus = "Minecraft for Windows is not installed";
+            StatusDetail = detection.Diagnostic ?? "Install Minecraft for Windows from the Microsoft Store, then refresh.";
+            return;
+        }
+
+        var state = detection.IsRunning ? "running" : "installed but closed";
+        GameStatus = $"Minecraft {detection.Installation!.Version} is {state}";
+
+        if (detection.Fingerprint is null)
+        {
+            StatusDetail = detection.Diagnostic ?? "The executable could not be fingerprinted. Patches remain unavailable.";
+            return;
+        }
+
+        StatusDetail = $"{detection.Fingerprint.Architecture} · SHA-256 {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
     }
 }
