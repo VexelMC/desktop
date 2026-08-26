@@ -103,15 +103,29 @@ public sealed class MainViewModel : ViewModelBase
 
     private void UpdateGameStatus(MinecraftDetectionResult detection)
     {
-        if (!detection.IsInstalled)
+        if (detection.IsRunning)
         {
-            GameStatus = "Minecraft for Windows is not installed";
-            StatusDetail = detection.Diagnostic ?? "Install Minecraft for Windows from the Microsoft Store, then refresh.";
+            var version = detection.Installation?.Version ?? detection.Fingerprint?.ProductVersion ?? "unknown build";
+            GameStatus = $"Minecraft {version} is running";
+
+            if (detection.Fingerprint is null)
+            {
+                StatusDetail = detection.Diagnostic ?? "The running executable could not be fingerprinted. Patches remain unavailable.";
+                return;
+            }
+
+            StatusDetail = $"{detection.Fingerprint.Architecture} · SHA-256 {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
             return;
         }
 
-        var state = detection.IsRunning ? "running" : "installed but closed";
-        GameStatus = $"Minecraft {detection.Installation!.Version} is {state}";
+        if (!detection.IsInstalled)
+        {
+            GameStatus = "No Minecraft process detected";
+            StatusDetail = detection.Diagnostic ?? "Start Minecraft, then refresh. A Microsoft Store package is not required.";
+            return;
+        }
+
+        GameStatus = $"Minecraft {detection.Installation!.Version} is installed but closed";
 
         if (detection.Fingerprint is null)
         {

@@ -9,31 +9,41 @@ public sealed class MinecraftDetector : IMinecraftDetector
     private const string AppModelPackagesKey = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages";
     private const string MinecraftPackagePrefix = "Microsoft.MinecraftUWP_";
     private const string MinecraftExecutableName = "Minecraft.Windows.exe";
+    private static readonly string[] MinecraftProcessNames = ["Minecraft.Windows", "Minecraft"];
 
     public Task<MinecraftDetectionResult> DetectAsync(CancellationToken cancellationToken = default) =>
         Task.Run(() => DetectCoreAsync(cancellationToken), cancellationToken);
 
     private static async Task<MinecraftDetectionResult> DetectCoreAsync(CancellationToken cancellationToken)
     {
-        MinecraftInstallation? installation;
+        MinecraftInstallation? installation = null;
+        string? packageDiagnostic = null;
         try
         {
             installation = FindInstallation();
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or InvalidOperationException)
         {
-            return new MinecraftDetectionResult(null, [], null, $"Package discovery failed: {exception.Message}");
+            packageDiagnostic = $"Package discovery failed: {exception.Message}";
         }
 
         var processes = FindProcesses();
-        if (installation is null)
+        var executablePath = processes
+            .Select(process => process.ExecutablePath)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            ?? installation?.ExecutablePath;
+
+        if (string.IsNullOrWhiteSpace(executablePath))
         {
-            return new MinecraftDetectionResult(null, processes, null, null);
+            var diagnostic = processes.Length > 0
+                ? "A Minecraft process was found, but its executable path could not be read."
+                : packageDiagnostic;
+            return new MinecraftDetectionResult(installation, processes, null, diagnostic);
         }
 
         try
         {
-            var fingerprint = await ExecutableFingerprintReader.ReadAsync(installation.ExecutablePath, cancellationToken);
+            var fingerprint = await ExecutableFingerprintReader.ReadAsync(executablePath, cancellationToken);
             return new MinecraftDetectionResult(installation, processes, fingerprint, null);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or BadImageFormatException)
@@ -88,10 +98,10 @@ public sealed class MinecraftDetector : IMinecraftDetector
 
     private static MinecraftProcess[] FindProcesses()
     {
-        var processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(MinecraftExecutableName));
+        var processes = Process.GetProcesses();
         try
         {
-            return processes.Select(process =>
+            return processes.Where(IsMinecraftProcess).Select(process =>
             {
                 try
                 {
@@ -114,4 +124,7 @@ public sealed class MinecraftDetector : IMinecraftDetector
             }
         }
     }
+
+    private static bool IsMinecraftProcess(Process process) =>
+        MinecraftProcessNames.Any(name => process.ProcessName.Equals(name, StringComparison.OrdinalIgnoreCase));
 }
