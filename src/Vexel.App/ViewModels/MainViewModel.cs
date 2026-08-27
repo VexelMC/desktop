@@ -182,5 +182,10 @@ public sealed class MainViewModel : ViewModelBase
     }
 
     private static string FingerprintLabel(MinecraftBuildFingerprint fingerprint) =>
-        fingerprint.Source == FingerprintSource.ExecutableFile ? "File SHA-256" : "Loaded-image SHA-256";
+        fingerprint.Source switch
+        {
+            FingerprintSource.ExecutableFile => "File SHA-256",
+            FingerprintSource.LoadedExecutableSections => "Loaded-code SHA-256",
+            _ => "Loaded-image SHA-256",
+        };
 }

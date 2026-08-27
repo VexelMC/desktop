@@ -22,8 +22,8 @@ public sealed class LoadedModuleFingerprintReaderTests
 
         var fingerprint = await LoadedModuleFingerprintReader.ReadAsync(process, "test-build");
 
-        Assert.Equal(FingerprintSource.LoadedModule, fingerprint.Source);
+        Assert.Equal(FingerprintSource.LoadedExecutableSections, fingerprint.Source);
         Assert.Equal(64, fingerprint.Sha256.Length);
-        Assert.Equal(module.ModuleMemorySize, fingerprint.FileSize);
+        Assert.InRange(fingerprint.FileSize, 1, module.ModuleMemorySize);
     }
 }

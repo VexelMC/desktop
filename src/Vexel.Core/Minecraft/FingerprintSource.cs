@@ -4,4 +4,5 @@ public enum FingerprintSource
 {
     ExecutableFile,
     LoadedModule,
+    LoadedExecutableSections,
 }
