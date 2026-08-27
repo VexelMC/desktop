@@ -114,7 +114,7 @@ public sealed class MainViewModel : ViewModelBase
                 return;
             }
 
-            StatusDetail = $"{detection.Fingerprint.Architecture} · SHA-256 {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
+            StatusDetail = $"{detection.Fingerprint.Architecture} · {FingerprintLabel(detection.Fingerprint)} {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
             return;
         }
 
@@ -133,6 +133,9 @@ public sealed class MainViewModel : ViewModelBase
             return;
         }
 
-        StatusDetail = $"{detection.Fingerprint.Architecture} · SHA-256 {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
+        StatusDetail = $"{detection.Fingerprint.Architecture} · {FingerprintLabel(detection.Fingerprint)} {detection.Fingerprint.Sha256[..12]}… · no verified patch definitions for this build.";
     }
+
+    private static string FingerprintLabel(MinecraftBuildFingerprint fingerprint) =>
+        fingerprint.Source == FingerprintSource.ExecutableFile ? "File SHA-256" : "Loaded-image SHA-256";
 }

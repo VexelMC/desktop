@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 using Vexel.Core.Minecraft;
+using Vexel.Platform.Windows.Memory;
 
 namespace Vexel.Platform.Windows.Detection;
 
@@ -46,7 +47,26 @@ public sealed class MinecraftDetector : IMinecraftDetector
             var fingerprint = await ExecutableFingerprintReader.ReadAsync(executablePath, cancellationToken);
             return new MinecraftDetectionResult(installation, processes, fingerprint, null);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or BadImageFormatException)
+        catch (UnauthorizedAccessException)
+        {
+            var runningProcess = processes.FirstOrDefault(process => process.ModuleBaseAddress is not null && process.ModuleSize is not null);
+            if (runningProcess is null)
+            {
+                return new MinecraftDetectionResult(installation, processes, null, "The executable is protected and the running module layout is unavailable.");
+            }
+
+            try
+            {
+                var version = installation?.Version ?? "Unknown";
+                var fingerprint = await LoadedModuleFingerprintReader.ReadAsync(runningProcess, version, cancellationToken);
+                return new MinecraftDetectionResult(installation, processes, fingerprint, null);
+            }
+            catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                return new MinecraftDetectionResult(installation, processes, null, $"Loaded-module fingerprinting failed: {exception.Message}");
+            }
+        }
+        catch (Exception exception) when (exception is IOException or BadImageFormatException)
         {
             return new MinecraftDetectionResult(installation, processes, null, $"Fingerprinting failed: {exception.Message}");
         }
@@ -105,10 +125,13 @@ public sealed class MinecraftDetector : IMinecraftDetector
             {
                 try
                 {
+                    var module = process.MainModule;
                     return new MinecraftProcess(
                         process.Id,
-                        process.MainModule?.FileName,
-                        new DateTimeOffset(process.StartTime.ToUniversalTime()));
+                        module?.FileName,
+                        new DateTimeOffset(process.StartTime.ToUniversalTime()),
+                        module?.BaseAddress.ToInt64(),
+                        module?.ModuleMemorySize);
                 }
                 catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
                 {

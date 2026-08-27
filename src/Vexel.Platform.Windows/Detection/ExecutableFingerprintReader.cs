@@ -30,7 +30,8 @@ public static class ExecutableFingerprintReader
             file.Length,
             Convert.ToHexString(sha256),
             timestamp,
-            architecture);
+            architecture,
+            FingerprintSource.ExecutableFile);
     }
 
     private static (DateTimeOffset? Timestamp, ExecutableArchitecture Architecture) ReadPeMetadata(string executablePath)

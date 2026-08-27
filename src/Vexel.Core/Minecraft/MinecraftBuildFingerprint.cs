@@ -6,4 +6,5 @@ public sealed record MinecraftBuildFingerprint(
     long FileSize,
     string Sha256,
     DateTimeOffset? PeTimestamp,
-    ExecutableArchitecture Architecture);
+    ExecutableArchitecture Architecture,
+    FingerprintSource Source);

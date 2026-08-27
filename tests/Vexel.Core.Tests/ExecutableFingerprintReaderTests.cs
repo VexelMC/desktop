@@ -15,5 +15,6 @@ public sealed class ExecutableFingerprintReaderTests
         Assert.Equal(64, fingerprint.Sha256.Length);
         Assert.True(fingerprint.FileSize > 0);
         Assert.NotEqual(ExecutableArchitecture.Unknown, fingerprint.Architecture);
+        Assert.Equal(FingerprintSource.ExecutableFile, fingerprint.Source);
     }
 }
