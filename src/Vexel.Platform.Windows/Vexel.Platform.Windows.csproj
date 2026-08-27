@@ -2,6 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vexel.Core\Vexel.Core.csproj" />
+    <ProjectReference Include="..\Vexel.Patching\Vexel.Patching.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Iced" Version="1.21.0" />
   </ItemGroup>
 
   <PropertyGroup>

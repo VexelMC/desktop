@@ -6,6 +6,7 @@ using Vexel.Core.Logging;
 using Vexel.Core.Minecraft;
 using Vexel.Core.Settings;
 using Vexel.Platform.Windows.Detection;
+using Vexel.Platform.Windows.Compatibility;
 
 namespace Vexel.App;
 
@@ -22,6 +23,7 @@ public partial class App : Application
         services.AddSingleton<IAppLogger>(provider =>
             new JsonFileLogger(provider.GetRequiredService<VexelPaths>().Logs));
         services.AddSingleton<IMinecraftDetector, MinecraftDetector>();
+        services.AddSingleton<MinecraftFeatureProbe>();
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
         _services = services.BuildServiceProvider();

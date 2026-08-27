@@ -4,6 +4,7 @@ using Vexel.App.Models;
 using Vexel.Core.Logging;
 using Vexel.Core.Minecraft;
 using Vexel.Core.Settings;
+using Vexel.Platform.Windows.Compatibility;
 
 namespace Vexel.App.ViewModels;
 
@@ -12,6 +13,7 @@ public sealed class MainViewModel : ViewModelBase
     private readonly IAppLogger _logger;
     private readonly IMinecraftDetector _minecraftDetector;
     private readonly ISettingsStore _settingsStore;
+    private readonly MinecraftFeatureProbe _featureProbe;
     private string _gameStatus = "Checking installation…";
     private string _statusDetail = "Vexel has not modified Minecraft.";
     private bool _isRefreshing;
@@ -19,11 +21,13 @@ public sealed class MainViewModel : ViewModelBase
     public MainViewModel(
         IAppLogger logger,
         ISettingsStore settingsStore,
-        IMinecraftDetector minecraftDetector)
+        IMinecraftDetector minecraftDetector,
+        MinecraftFeatureProbe featureProbe)
     {
         _logger = logger;
         _settingsStore = settingsStore;
         _minecraftDetector = minecraftDetector;
+        _featureProbe = featureProbe;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsRefreshing);
         Features = new ObservableCollection<FeatureCard>
         {
@@ -83,6 +87,7 @@ public sealed class MainViewModel : ViewModelBase
         {
             var detection = await _minecraftDetector.DetectAsync();
             UpdateGameStatus(detection);
+            await UpdateFeatureResearchAsync(detection);
             await _logger.WriteAsync(new LogEntry(
                 DateTimeOffset.UtcNow,
                 LogLevel.Information,
@@ -98,6 +103,46 @@ public sealed class MainViewModel : ViewModelBase
         finally
         {
             IsRefreshing = false;
+        }
+    }
+
+    private async Task UpdateFeatureResearchAsync(MinecraftDetectionResult detection)
+    {
+        if (!detection.IsRunning || detection.Fingerprint is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var results = await _featureProbe.ProbeAsync(detection);
+            foreach (var result in results)
+            {
+                var index = result.FeatureId switch
+                {
+                    "item-use-delay" => 0,
+                    "auto-sprint" => 2,
+                    _ => -1,
+                };
+
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                var existing = Features[index];
+                var status = result.HasSingleCandidate ? "Candidate only" : "Not compatible";
+                Features[index] = existing with { Status = status, Detail = result.Detail };
+            }
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            await _logger.WriteAsync(new LogEntry(
+                DateTimeOffset.UtcNow,
+                LogLevel.Warning,
+                "feature.probe",
+                "Read-only feature research could not scan the Minecraft module.",
+                new Dictionary<string, string> { ["error"] = exception.Message }));
         }
     }
 

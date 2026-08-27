@@ -28,5 +28,21 @@ process identity and loaded module were read without writing to Minecraft.
 | No Hurt Cam | Unverified | No build-specific reverse engineering yet |
 | GUI Scale | Unverified | No build-specific reverse engineering yet |
 
+## First-module research
+
+The following diagnostics ran against the live, read-only module image on
+2026-08-27. They did not write to Minecraft, attach a runtime, or enable a
+feature.
+
+| Feature | Historical candidate result | Decision |
+| --- | --- | --- |
+| Item Delay Fix | 0 matches | Reject the historical signature for this build. |
+| AutoSprint | 4 matches | Reject as ambiguous. Decoding shows four distinct vtable initializers, so none identifies a player-tick callback on its own. |
+
+Before either module can be enabled on this exact fingerprint, Vexel needs a
+build-specific target, instruction-level context validation, and offline
+behaviour testing. AutoSprint must still leave vanilla movement and server
+rules authoritative.
+
 This document records detection only. It does not authorize an internal runtime
 attach or any memory patch for this build.
